@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Risk & Reward Calculator</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#F0EDE8;min-height:100vh;padding:0 0 64px;color:#2C2418}
+
+  .tab-bar{background:#5C7A52;display:flex;padding:0 24px;gap:4px;position:sticky;top:0;z-index:100}
+  .tab-btn{background:none;border:none;color:#C5D9BF;font-size:13px;font-weight:600;padding:16px 20px 14px;cursor:pointer;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;font-family:inherit}
+  .tab-btn.active{color:#fff;border-bottom-color:#fff}
+  .tab-btn:hover:not(.active){color:#E8F0E5}
+  .tab-content{display:none}.tab-content.active{display:block}
+
+  .disclaimer-bar{background:#FBF4E3;border-left:4px solid #D97706;padding:10px 16px;font-size:12px;color:#8B6914;line-height:1.5}
+  .disclaimer-bar strong{font-weight:700}
+
+  .page{max-width:680px;margin:0 auto;padding:24px 16px 0}
+  .header{background:#5C7A52;border-radius:20px;padding:28px 36px;margin-bottom:16px;text-align:center}
+  .header h1{color:#fff;font-size:22px;font-weight:600}
+  .header p{color:#C5D9BF;font-size:13px;margin-top:6px}
+  .card{background:#FAF7F4;border-radius:20px;padding:24px 28px;margin-bottom:14px}
+  .card-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#5C7A52;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+  .card-title::after{content:'';flex:1;height:1px;background:#E0DCD6}
+
+  .field-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px}
+  .field-row label{font-size:13px;color:#6B5B50;flex:1}
+  .field-right{display:flex;align-items:center;gap:8px}
+  input[type="number"],input[type="text"],select,textarea{appearance:none;background:#FDF4F5;border:1.5px solid #E8C4CB;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:600;color:#8B4A5A;width:140px;text-align:right;outline:none;transition:border-color .15s,box-shadow .15s;font-family:inherit}
+  input:focus,select:focus,textarea:focus{border-color:#C4607A;box-shadow:0 0 0 3px rgba(196,96,122,.12)}
+  select{cursor:pointer;text-align:left}
+  .unit{font-size:12px;color:#9B8880;min-width:28px}
+  .computed{background:#F0EDE8;border:1.5px solid #D4CFC8;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:600;color:#4A3D35;width:140px;text-align:right}
+  .divider{height:1px;background:#EAE5DF;margin:12px 0}
+
+  .entry-grid{display:grid;grid-template-columns:36px 1fr 1fr 1fr 1fr;gap:8px;align-items:center}
+  .col-head{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9B8880;text-align:center;padding-bottom:6px}
+  .entry-badge{width:32px;height:32px;background:#5C7A52;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .entry-badge.inactive{background:#C9D8C4;color:#8F9E89}
+  .entry-input{appearance:none;background:#FDF4F5;border:1.5px solid #E8C4CB;border-radius:10px;padding:9px 10px;font-size:13px;font-weight:600;color:#8B4A5A;width:100%;text-align:right;outline:none;font-family:inherit}
+  .entry-input:focus{border-color:#C4607A;box-shadow:0 0 0 3px rgba(196,96,122,.12)}
+  .entry-input:disabled{background:#F0EDE8;border-color:#E0DCD6;color:#C0B8B0;cursor:not-allowed}
+  .entry-calc{background:#F0EDE8;border:1.5px solid #D4CFC8;border-radius:10px;padding:9px 10px;font-size:13px;font-weight:600;color:#4A3D35;width:100%;text-align:right}
+  .entry-calc.inactive{color:#C0B8B0}
+
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat-card{background:#F0EDE8;border-radius:14px;padding:14px 16px}
+  .stat-card .stat-label{font-size:11px;color:#9B8880;margin-bottom:4px;font-weight:500}
+  .stat-card .stat-value{font-size:20px;font-weight:700;color:#4A3D35;letter-spacing:-.5px}
+  .stat-card.risk{background:#FDEDEF}.stat-card.risk .stat-label{color:#D4849A}.stat-card.risk .stat-value{color:#C4607A}
+  .stat-card.amber{background:#FBF4E3}.stat-card.amber .stat-label{color:#C49A2A}.stat-card.amber .stat-value{color:#8B6914}
+  .stat-card.wide{grid-column:1/-1}
+  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #EAE5DF;font-size:13px}
+  .stat-row:last-child{border-bottom:none}
+  .stat-row .stat-row-label{color:#6B5B50}.stat-row .stat-row-value{font-weight:600;color:#4A3D35}
+
+  .log-btn{width:100%;padding:16px;background:#5C7A52;color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s,transform .1s;margin-bottom:14px}
+  .log-btn:hover{background:#4A6B47}.log-btn:active{transform:scale(.98)}
+
+  /* Journal */
+  .journal-empty{text-align:center;padding:60px 20px;color:#9B8880}
+  .journal-empty .empty-icon{font-size:48px;margin-bottom:12px}
+  .journal-empty p{font-size:14px;line-height:1.7}
+  .journal-stats-bar{background:#5C7A52;border-radius:20px;padding:20px 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .jstat{text-align:center}.jstat-label{font-size:10px;color:#C5D9BF;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .jstat-value{font-size:20px;font-weight:700;color:#fff;margin-top:2px}
+  .jstat-value.pos{color:#A8D5A0}.jstat-value.neg{color:#F5A0AF}
+
+  .trade-card{background:#FAF7F4;border-radius:20px;margin-bottom:14px;overflow:hidden}
+  .trade-header{padding:18px 24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+  .trade-header:hover{background:#F5F0EB}
+  .trade-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .trade-ticker{font-size:18px;font-weight:700;color:#2C2418}
+  .dir-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px}
+  .dir-badge.long{background:#EBF0E7;color:#4A6B47}.dir-badge.short{background:#FDEDEF;color:#C4607A}
+  .trade-right{display:flex;align-items:center;gap:10px}
+  .trade-pl{font-size:16px;font-weight:700}
+  .trade-pl.pos{color:#4A6B47}.trade-pl.neg{color:#C4607A}.trade-pl.zero{color:#9B8880}
+  .trade-date{font-size:12px;color:#9B8880}
+  .chevron{font-size:12px;color:#9B8880;transition:transform .2s}.chevron.open{transform:rotate(180deg)}
+  .trade-body{display:none;border-top:1px solid #EAE5DF;padding:20px 24px}
+  .trade-body.open{display:block}
+
+  .tsection{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5C7A52;margin:16px 0 10px}
+  .tsection:first-child{margin-top:0}
+
+  /* Entry rows */
+  .j-entry-block{margin-bottom:10px}
+  .j-entry-row{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+  .j-entry-num{width:28px;height:28px;background:#5C7A52;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+  .j-entry-num.inactive{background:#C9D8C4;color:#8F9E89}
+  .j-pill{background:#F0EDE8;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:#4A3D35}
+  .j-pill.inp{background:#FDF4F5;color:#8B4A5A}
+
+  .entry-status-sel{appearance:none;border:1.5px solid #E8C4CB;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;outline:none;cursor:pointer;font-family:inherit;width:auto;text-align:left;min-width:128px}
+  .entry-status-sel.placed{background:#FDF4F5;color:#8B4A5A;border-color:#E8C4CB}
+  .entry-status-sel.validated{background:#EBF0E7;color:#2D6A3F;border-color:#A8D5B5}
+  .entry-status-sel.never_validated{background:#F0EDE8;color:#6B5B50;border-color:#C0B8B0}
+  .entry-status-sel.stopped{background:#FDEDEF;color:#C4607A;border-color:#F5A0AF}
+
+  /* Actual fill price row */
+  .fill-price-row{display:flex;align-items:center;gap:8px;padding:4px 0 4px 36px;font-size:12px}
+  .fill-price-row label{color:#6B5B50;white-space:nowrap}
+  .fill-price-input{appearance:none;background:#EBF0E7;border:1.5px solid #A8D5B5;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#2D6A3F;width:110px;text-align:right;outline:none;font-family:inherit}
+  .fill-price-input:focus{border-color:#2D6A3F;box-shadow:0 0 0 3px rgba(45,106,63,.12)}
+  .fill-hint{font-size:11px;color:#9B8880;font-style:italic}
+
+  /* Validated summary */
+  .val-summary{background:#2D6A3F;border-radius:12px;padding:12px 16px;margin:10px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .val-summary .vs-label{font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.06em}
+  .val-summary .vs-chip{background:rgba(255,255,255,.18);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px}
+  .val-summary .vs-empty{color:#A8D5B5;font-size:12px;font-style:italic}
+
+  /* FIFO sell log */
+  .sell-col-heads{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:6px}
+  .sell-col-head{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9B8880;text-align:center}
+  .sell-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+  .sell-input{appearance:none;background:#FDF4F5;border:1.5px solid #E8C4CB;border-radius:9px;padding:7px 10px;font-size:13px;font-weight:600;color:#8B4A5A;width:100%;text-align:right;outline:none;font-family:inherit}
+  .sell-input:focus{border-color:#C4607A}
+  .sell-pl{font-size:13px;font-weight:700;text-align:right;white-space:nowrap}
+  .sell-pl.pos{color:#4A6B47}.sell-pl.neg{color:#C4607A}.sell-pl.zero{color:#9B8880}
+  .sell-del{background:none;border:1.5px solid #E8C4CB;border-radius:7px;color:#C4607A;font-size:14px;padding:4px 8px;cursor:pointer;font-family:inherit;line-height:1}
+  .sell-del:hover{background:#FDEDEF}
+
+  .add-sale-btn{width:100%;padding:10px;background:none;border:1.5px dashed #A8D5B5;border-radius:10px;color:#4A6B47;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px;transition:background .15s}
+  .add-sale-btn:hover{background:#EBF0E7}
+
+  /* Position summary */
+  .pos-summary{background:#F0EDE8;border-radius:14px;padding:16px;margin-top:12px}
+  .pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+  .pos-stat{text-align:center}
+  .pos-stat-label{font-size:10px;color:#9B8880;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+  .pos-stat-value{font-size:16px;font-weight:700;color:#4A3D35}
+  .pos-pl-row{display:flex;justify-content:space-between;align-items:center;background:#FAF7F4;border-radius:10px;padding:12px 14px}
+  .pos-pl-label{font-size:13px;font-weight:700;color:#4A6B47}
+  .pos-pl-value{font-size:20px;font-weight:700}
+  .pos-pl-value.pos{color:#4A6B47}.pos-pl-value.neg{color:#C4607A}.pos-pl-value.zero{color:#9B8880}
+
+  .notes-area{width:100%;background:#F0EDE8;border:1.5px solid #D4CFC8;border-radius:10px;padding:10px 14px;font-size:13px;color:#4A3D35;font-family:inherit;resize:vertical;min-height:64px;text-align:left;font-weight:400}
+  .delete-btn{background:none;border:1.5px solid #E8C4CB;border-radius:8px;color:#C4607A;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;font-family:inherit}
+  .delete-btn:hover{background:#FDEDEF}
+  .footer{text-align:center;font-size:11px;color:#9B8880;margin-top:24px;padding:0 16px 32px}
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('calculator',this)">📈 Calculator</button>
+  <button class="tab-btn" onclick="showTab('journal',this)">📓 Trade Journal</button>
+</div>
+<div class="disclaimer-bar">
+  <strong>📌 Two versions, not synced:</strong> This web app and the Google Sheets version are separate tools — data in one does not appear in the other. Use whichever fits your workflow, or both for different purposes.
+</div>
+
+<!-- CALCULATOR TAB -->
+<div id="tab-calculator" class="tab-content active">
+<div class="page">
+  <div class="header">
+    <h1>📈 Stock Risk & Reward Calculator</h1>
+    <p>Pyramid Entry Strategy &nbsp;·&nbsp; Risk Management</p>
+  </div>
+  <div class="card">
+    <div class="card-title">Account &amp; Risk Settings</div>
+    <div class="field-row"><label>Total Account Value</label><div class="field-right"><span class="unit">$</span><input type="number" id="accountValue" value="100000" min="0" step="1000"></div></div>
+    <div class="field-row"><label>Risk Per Trade</label><div class="field-right"><input type="number" id="riskPct" value="1" min="0" max="100" step="0.1" style="width:110px"><span class="unit">%</span></div></div>
+    <div class="field-row"><label>Total Dollar Risk</label><div class="field-right"><span class="unit">$</span><div class="computed" id="dollarRisk">—</div></div></div>
+    <div class="divider"></div>
+    <div class="field-row"><label>Ticker Symbol</label><div class="field-right"><input type="text" id="ticker" value="AAPL" style="text-transform:uppercase;text-align:right;width:110px"></div></div>
+    <div class="field-row"><label>Trade Direction</label><div class="field-right"><select id="direction" style="width:110px"><option>LONG</option><option>SHORT</option></select></div></div>
+    <div class="field-row"><label>Stop Loss Price</label><div class="field-right"><span class="unit">$</span><input type="number" id="stopLoss" value="0" min="0" step="0.01"></div></div>
+    <div class="field-row"><label>Number of Entries</label><div class="field-right"><select id="numEntries" style="width:110px"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></div></div>
+    <div class="field-row"><label>Risk Per Entry</label><div class="field-right"><span class="unit">$</span><div class="computed" id="riskPerEntry">—</div></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Pyramid Entry Planner</div>
+    <div class="entry-grid" id="entryGrid">
+      <div class="col-head">#</div><div class="col-head">Entry Price</div><div class="col-head">Risk $</div><div class="col-head">Shares</div><div class="col-head">Position $</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Trade Summary</div>
+    <div class="summary-grid">
+      <div class="stat-card"><div class="stat-label">Avg Entry Price</div><div class="stat-value" id="s-avgEntry">—</div></div>
+      <div class="stat-card"><div class="stat-label">Total Shares</div><div class="stat-value" id="s-totalShares">—</div></div>
+      <div class="stat-card"><div class="stat-label">Total Position Size</div><div class="stat-value" id="s-totalPos">—</div></div>
+      <div class="stat-card"><div class="stat-label">% of Account</div><div class="stat-value" id="s-pctAcct">—</div></div>
+      <div class="stat-card risk"><div class="stat-label">Max Dollar Loss</div><div class="stat-value" id="s-maxLoss">—</div></div>
+      <div class="stat-card risk"><div class="stat-label">Max Loss % of Account</div><div class="stat-value" id="s-maxLossPct">—</div></div>
+      <div class="stat-card amber"><div class="stat-label">Actual Risk Used</div><div class="stat-value" id="s-actualRisk">—</div></div>
+      <div class="stat-card amber"><div class="stat-label">Unused Budget</div><div class="stat-value" id="s-unusedRisk">—</div></div>
+      <div class="stat-card wide">
+        <div class="stat-row"><span class="stat-row-label">Stop Loss Price</span><span class="stat-row-value" id="s-stop">—</span></div>
+        <div class="stat-row"><span class="stat-row-label">Stop Distance from Avg Entry</span><span class="stat-row-value" id="s-stopDist">—</span></div>
+        <div class="stat-row"><span class="stat-row-label">Stop Distance %</span><span class="stat-row-value" id="s-stopDistPct">—</span></div>
+      </div>
+    </div>
+  </div>
+  <button class="log-btn" onclick="logTrade()">📓 &nbsp; Log This Trade to Journal</button>
+  <div class="footer">⚠ For educational purposes only. Not financial advice. Always verify all figures before placing trades and manage your own risk.</div>
+</div>
+</div>
+
+<!-- JOURNAL TAB -->
+<div id="tab-journal" class="tab-content">
+<div class="page">
+  <div id="journalStatsBar" class="journal-stats-bar" style="display:none">
+    <div class="jstat"><div class="jstat-label">Trades Logged</div><div class="jstat-value" id="j-count">0</div></div>
+    <div class="jstat"><div class="jstat-label">Realized P/L</div><div class="jstat-value" id="j-totalpl">—</div></div>
+    <div class="jstat"><div class="jstat-label">Win Rate</div><div class="jstat-value" id="j-winrate">—</div></div>
+  </div>
+  <div id="journalList"></div>
+  <div class="footer">⚠ For educational purposes only. Not financial advice. Always verify all figures before placing trades and manage your own risk.</div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const f$=v=>(!v&&v!==0)||isNaN(v)?'—':'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const f$s=v=>v==null?'—':(v>=0?'+$':'-$')+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fN=v=>(!v||isNaN(v))?'—':v.toLocaleString('en-US');
+const fP=v=>v==null?'—':(v*100).toFixed(2)+'%';
+const tod=()=>new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+
+function showTab(tab,btn){
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
+  $('tab-'+tab).classList.add('active'); btn.classList.add('active');
+  if(tab==='journal') renderJournal();
+}
+
+// ── Calculator ────────────────────────────────────────────────────
+function buildEntryRows(){
+  const n=parseInt($('numEntries').value);
+  const grid=$('entryGrid');
+  const headers=Array.from(grid.querySelectorAll('.col-head'));
+  grid.innerHTML=''; headers.forEach(h=>grid.appendChild(h));
+  for(let i=1;i<=5;i++){
+    const active=i<=n;
+    const badge=document.createElement('div');
+    badge.className='entry-badge'+(active?'':' inactive');badge.textContent=i;grid.appendChild(badge);
+    const ep=document.createElement('input');
+    ep.type='number';ep.min='0';ep.step='0.01';ep.className='entry-input';ep.id='ep'+i;
+    ep.disabled=!active;ep.placeholder=active?'0.00':'—';
+    ep.addEventListener('input',calc);grid.appendChild(ep);
+    ['riskAmt','shares','posSize'].forEach(f=>{
+      const d=document.createElement('div');
+      d.className='entry-calc'+(active?'':' inactive');d.id=f+i;d.textContent=active?'—':'';
+      grid.appendChild(d);
+    });
+  }
+  calc();
+}
+
+function calc(){
+  const acct=parseFloat($('accountValue').value)||0,rPct=parseFloat($('riskPct').value)/100||0;
+  const stop=parseFloat($('stopLoss').value)||0,n=parseInt($('numEntries').value);
+  const dolRisk=acct*rPct,rpe=n>0?dolRisk/n:0;
+  $('dollarRisk').textContent=dolRisk?f$(dolRisk).replace('$',''):'—';
+  $('riskPerEntry').textContent=rpe?f$(rpe).replace('$',''):'—';
+  let ts=0,tp=0;
+  for(let i=1;i<=5;i++){
+    if(i>n) continue;
+    const ep=parseFloat(document.getElementById('ep'+i)?.value)||0;
+    const dist=ep-stop,shares=dist>0?Math.floor(rpe/dist):0,pos=shares*ep;
+    ts+=shares;tp+=pos;
+    const r=$('riskAmt'+i),s=$('shares'+i),p=$('posSize'+i);
+    if(r)r.textContent=rpe>0?f$(rpe):'—';
+    if(s)s.textContent=shares>0?fN(shares):'—';
+    if(p)p.textContent=pos>0?f$(pos):'—';
+  }
+  const avg=ts>0?tp/ts:0,maxLoss=(avg-stop)*ts,sd=avg-stop;
+  let actualRisk=0;
+  for(let i=1;i<=n;i++){
+    const ep=parseFloat(document.getElementById('ep'+i)?.value)||0;
+    const sh=parseInt($('shares'+i)?.textContent?.replace(/,/g,''))||0;
+    actualRisk+=sh*(ep-stop);
+  }
+  $('s-avgEntry').textContent=avg?f$(avg):'—';
+  $('s-totalShares').textContent=ts?fN(ts):'—';
+  $('s-totalPos').textContent=tp?f$(tp):'—';
+  $('s-pctAcct').textContent=tp&&acct?fP(tp/acct):'—';
+  $('s-maxLoss').textContent=maxLoss?f$(maxLoss):'—';
+  $('s-maxLossPct').textContent=maxLoss&&acct?fP(maxLoss/acct):'—';
+  $('s-actualRisk').textContent=actualRisk>0?f$(actualRisk):'—';
+  $('s-unusedRisk').textContent=actualRisk>0?f$(dolRisk-actualRisk):'—';
+  $('s-stop').textContent=stop?f$(stop):'—';
+  $('s-stopDist').textContent=sd?f$(sd):'—';
+  $('s-stopDistPct').textContent=sd&&avg?fP(sd/avg):'—';
+}
+
+['accountValue','riskPct','stopLoss'].forEach(id=>$(id).addEventListener('input',calc));
+$('numEntries').addEventListener('change',buildEntryRows);
+$('ticker').addEventListener('input',()=>{$('ticker').value=$('ticker').value.toUpperCase();});
+
+// ── Storage ───────────────────────────────────────────────────────
+function load(){try{return JSON.parse(localStorage.getItem('tradeJournal')||'[]');}catch{return[];}}
+function save(t){localStorage.setItem('tradeJournal',JSON.stringify(t));}
+
+// ── Log trade ─────────────────────────────────────────────────────
+function logTrade(){
+  const acct=parseFloat($('accountValue').value)||0,rPct=parseFloat($('riskPct').value)/100||0;
+  const stop=parseFloat($('stopLoss').value)||0,n=parseInt($('numEntries').value);
+  const dolRisk=acct*rPct,rpe=dolRisk/n;
+  let ts=0,tp=0;
+  const entries=[];
+  for(let i=1;i<=n;i++){
+    const ep=parseFloat(document.getElementById('ep'+i)?.value)||0;
+    const dist=ep-stop,shares=dist>0?Math.floor(rpe/dist):0;
+    entries.push({price:ep,shares,status:'placed',actualPrice:null});
+    ts+=shares;tp+=shares*ep;
+  }
+  const avg=ts>0?tp/ts:0;
+  let actualRisk=0;entries.forEach(e=>{actualRisk+=e.shares*(e.price-stop);});
+  const trade={id:Date.now(),date:tod(),ticker:$('ticker').value||'—',direction:$('direction').value,
+    stopLoss:stop,numEntries:n,riskPerEntry:rpe,dollarRisk:dolRisk,
+    entries,avgEntry:avg,totalShares:ts,totalPos:tp,actualRisk,sells:[],notes:''};
+  const trades=load();trades.unshift(trade);save(trades);
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===1));
+  document.querySelectorAll('.tab-content').forEach((c,i)=>c.classList.toggle('active',i===1));
+  renderJournal();window.scrollTo(0,0);
+}
+
+// ── FIFO helpers ──────────────────────────────────────────────────
+function buildLots(trade){
+  // Returns [{costBasis, shares}] in entry order for validated entries
+  const lots=[];
+  trade.entries.forEach(e=>{
+    if((e.status||'placed')==='validated'&&(e.shares||0)>0){
+      const price=parseFloat(e.actualPrice)||parseFloat(e.price)||0;
+      if(price>0) lots.push({costBasis:price,shares:e.shares});
+    }
+  });
+  return lots;
+}
+
+function calcFifoPLs(trade){
+  // Recalculate FIFO P/L for all sells in sequence
+  let lots=buildLots(trade).map(l=>({...l}));
+  return (trade.sells||[]).map(sale=>{
+    if(!sale.shares||!sale.price||sale.price<=0) return{id:sale.id,pl:null};
+    let rem=sale.shares,pl=0;
+    for(let i=0;i<lots.length&&rem>0;i++){
+      const take=Math.min(lots[i].shares,rem);
+      pl+=take*(sale.price-lots[i].costBasis);
+      lots[i].shares-=take; rem-=take;
+    }
+    lots=lots.filter(l=>l.shares>0);
+    return{id:sale.id,pl};
+  });
+}
+
+function calcPosition(trade){
+  const lots=buildLots(trade);
+  const totalShares=lots.reduce((s,l)=>s+l.shares,0);
+  const totalCost=lots.reduce((s,l)=>s+l.shares*l.costBasis,0);
+  const avgCost=totalShares>0?totalCost/totalShares:0;
+  const sharesSold=(trade.sells||[]).reduce((s,sl)=>s+(sl.shares||0),0);
+  const sharesRemaining=Math.max(0,totalShares-sharesSold);
+  const fifoResults=calcFifoPLs(trade);
+  const realizedPL=fifoResults.reduce((s,r)=>s+(r.pl||0),0);
+  const hasAny=fifoResults.some(r=>r.pl!==null);
+  return{totalShares,avgCost,sharesSold,sharesRemaining,realizedPL:hasAny?realizedPL:null};
+}
+
+function calcValidated(trade){
+  let shares=0,value=0,count=0;
+  trade.entries.forEach(e=>{
+    if((e.status||'placed')==='validated'&&(e.shares||0)>0){
+      const p=parseFloat(e.actualPrice)||parseFloat(e.price)||0;
+      shares+=e.shares;value+=e.shares*p;count++;
+    }
+  });
+  return{shares,value,avgEntry:shares>0?value/shares:0,count};
+}
+
+// ── Journal render ────────────────────────────────────────────────
+function renderJournal(){
+  const trades=load(),list=$('journalList');
+  list.innerHTML='';
+  if(trades.length===0){
+    list.innerHTML=`<div class="journal-empty"><div class="empty-icon">📓</div><p>No trades logged yet.<br>Plan a trade in the Calculator tab,<br>then tap <strong>Log This Trade</strong> to save it here.</p></div>`;
+    $('journalStatsBar').style.display='none';return;
+  }
+  $('journalStatsBar').style.display='grid';
+  let totalPL=0,wins=0,closed=0;
+  trades.forEach(t=>{const pos=calcPosition(t);if(pos.realizedPL!==null){totalPL+=pos.realizedPL;closed++;if(pos.realizedPL>0)wins++;}});
+  $('j-count').textContent=trades.length;
+  if(closed>0){
+    $('j-totalpl').textContent=f$s(totalPL);$('j-totalpl').className='jstat-value '+(totalPL>0?'pos':totalPL<0?'neg':'');
+    $('j-winrate').textContent=Math.round((wins/closed)*100)+'%';
+  }else{$('j-totalpl').textContent='—';$('j-winrate').textContent='—';}
+
+  trades.forEach(trade=>{
+    const pos=calcPosition(trade);
+    const pl=pos.realizedPL,plClass=pl===null?'zero':pl>0?'pos':'neg',plText=pl===null?'Open':f$s(pl);
+    const card=document.createElement('div');card.className='trade-card';
+    card.innerHTML=`
+      <div class="trade-header" onclick="toggleTrade('${trade.id}')">
+        <div class="trade-title">
+          <span class="trade-ticker">${trade.ticker}</span>
+          <span class="dir-badge ${trade.direction==='LONG'?'long':'short'}">${trade.direction}</span>
+          <span style="font-size:12px;color:#9B8880">Stop: ${f$(trade.stopLoss)}</span>
+        </div>
+        <div class="trade-right">
+          <span class="trade-pl ${plClass}" id="pl-${trade.id}">${plText}</span>
+          <span class="trade-date">${trade.date}</span>
+          <span class="chevron" id="chev-${trade.id}">▼</span>
+        </div>
+      </div>
+      <div class="trade-body" id="body-${trade.id}">${renderBody(trade)}</div>`;
+    list.appendChild(card);
+  });
+}
+
+function renderBody(t){
+  // Entries
+  let entryRows='';
+  t.entries.forEach((e,i)=>{
+    const status=e.status||'placed';
+    const isVal=status==='validated';
+    const isInactive=(status==='never_validated'||status==='stopped');
+    const actualPrice=e.actualPrice?parseFloat(e.actualPrice):null;
+    const fillDiff=isVal&&actualPrice&&e.price?actualPrice-e.price:null;
+    const diffText=fillDiff!==null?(fillDiff>0?` (+$${fillDiff.toFixed(2)})`:` (-$${Math.abs(fillDiff).toFixed(2)})`):'';
+
+    entryRows+=`<div class="j-entry-block">
+      <div class="j-entry-row">
+        <div class="j-entry-num ${isInactive?'inactive':''}">${i+1}</div>
+        <div class="j-pill inp">Plan: $${(e.price||0).toFixed(2)}</div>
+        <div class="j-pill">${e.shares||0} shares</div>
+        <select class="entry-status-sel ${status}" id="es-${t.id}-${i}"
+          onchange="updateEntryStatus('${t.id}',${i},this.value)">
+          <option value="placed" ${status==='placed'?'selected':''}>Placed</option>
+          <option value="validated" ${status==='validated'?'selected':''}>Validated</option>
+          <option value="never_validated" ${status==='never_validated'?'selected':''}>Never Validated</option>
+          <option value="stopped" ${status==='stopped'?'selected':''}>Stopped Out</option>
+        </select>
+      </div>
+      ${isVal?`<div class="fill-price-row">
+        <label>Actual fill price:</label>
+        <span style="color:#9B8880;font-size:12px;">$</span>
+        <input class="fill-price-input" type="number" step="0.01" min="0"
+          placeholder="${(e.price||0).toFixed(2)}"
+          value="${actualPrice!==null?actualPrice:''}"
+          onchange="updateActualPrice('${t.id}',${i},this.value)">
+        ${fillDiff!==null?`<span class="fill-hint">${diffText} vs plan</span>`:'<span class="fill-hint">Leave blank to use planned price</span>'}
+      </div>`:''}
+    </div>`;
+  });
+
+  // Validated summary
+  const v=calcValidated(t);
+  const valHTML=v.count===0
+    ?`<div class="val-summary"><span class="vs-label">✓ Validated</span><span class="vs-empty">No entries validated yet</span></div>`
+    :`<div class="val-summary">
+      <span class="vs-label">✓ Validated</span>
+      <span class="vs-chip">${v.count}/${t.entries.length} entries</span>
+      <span class="vs-chip">Avg Cost: $${v.avgEntry.toFixed(2)}</span>
+      <span class="vs-chip">${v.shares} shares</span>
+      <span class="vs-chip">Cost Basis: ${f$(v.value)}</span>
+    </div>`;
+
+  // Sell log
+  const fifoResults=calcFifoPLs(t);
+  let sellRows='';
+  (t.sells||[]).forEach((sale,i)=>{
+    const res=fifoResults.find(r=>r.id===sale.id);
+    const pl=res?res.pl:null;
+    const plClass=pl===null?'zero':pl>=0?'pos':'neg';
+    sellRows+=`<div class="sell-row">
+      <input class="sell-input" type="number" placeholder="Shares" value="${sale.shares||''}"
+        onchange="updateSale('${t.id}','${sale.id}','shares',this.value)" min="0" step="1">
+      <input class="sell-input" type="number" placeholder="Price $" value="${sale.price||''}"
+        onchange="updateSale('${t.id}','${sale.id}','price',this.value)" min="0" step="0.01">
+      <div class="sell-pl ${plClass}" id="spl-${t.id}-${sale.id}">${pl===null?'—':f$s(pl)}</div>
+      <button class="sell-del" onclick="deleteSale('${t.id}','${sale.id}')">✕</button>
+    </div>`;
+  });
+
+  // Position summary
+  const pos=calcPosition(t);
+  const plClass=pos.realizedPL===null?'zero':pos.realizedPL>0?'pos':'neg';
+  const posSummary=`<div class="pos-summary">
+    <div class="pos-grid">
+      <div class="pos-stat">
+        <div class="pos-stat-label">Avg Cost Basis</div>
+        <div class="pos-stat-value">${pos.avgCost>0?'$'+pos.avgCost.toFixed(2):'—'}</div>
+      </div>
+      <div class="pos-stat">
+        <div class="pos-stat-label">Shares Remaining</div>
+        <div class="pos-stat-value" id="remaining-${t.id}">${pos.totalShares>0?pos.sharesRemaining:'—'}</div>
+      </div>
+      <div class="pos-stat">
+        <div class="pos-stat-label">Shares Sold</div>
+        <div class="pos-stat-value">${pos.sharesSold>0?pos.sharesSold:'—'}</div>
+      </div>
+    </div>
+    <div class="pos-pl-row">
+      <span class="pos-pl-label">Realized P/L (FIFO)</span>
+      <span class="pos-pl-value ${plClass}" id="realpl-${t.id}">${pos.realizedPL===null?'No sales yet':f$s(pos.realizedPL)}</span>
+    </div>
+  </div>`;
+
+  return`
+    <div class="tsection">Pyramid Entries</div>
+    <div style="font-size:11px;color:#9B8880;margin-bottom:10px;">Mark each entry's status as orders fill. For validated entries, enter the actual fill price if it differed from your plan.</div>
+    ${entryRows}
+    <div id="val-summary-${t.id}">${valHTML}</div>
+
+    <div class="tsection">Sell Log <span style="font-weight:400;color:#9B8880;font-size:9px;letter-spacing:0;text-transform:none;margin-left:4px;">FIFO · oldest shares sold first</span></div>
+    <div style="font-size:11px;color:#9B8880;margin-bottom:10px;">Log each partial or full sale. P/L is calculated using FIFO cost basis from your validated entries.</div>
+    <div class="sell-col-heads">
+      <div class="sell-col-head">Shares Sold</div>
+      <div class="sell-col-head">Sell Price $</div>
+      <div class="sell-col-head" style="text-align:right">FIFO P/L</div>
+      <div></div>
+    </div>
+    <div id="sell-rows-${t.id}">${sellRows||'<div style="font-size:12px;color:#9B8880;padding:8px 0;font-style:italic;">No sales logged yet.</div>'}</div>
+    <button class="add-sale-btn" onclick="addSale('${t.id}')">+ Log a Sale</button>
+    <div id="pos-summary-${t.id}">${posSummary}</div>
+
+    <div class="tsection" style="margin-top:16px">Notes</div>
+    <textarea class="notes-area" placeholder="Setup, lessons learned, emotions, what you'd do differently…"
+      onchange="updateNotes('${t.id}',this.value)">${t.notes||''}</textarea>
+    <div style="margin-top:14px;text-align:right">
+      <button class="delete-btn" onclick="deleteTrade('${t.id}')">Delete Trade</button>
+    </div>`;
+}
+
+// ── Journal actions ───────────────────────────────────────────────
+function toggleTrade(id){$('body-'+id).classList.toggle('open');$('chev-'+id).classList.toggle('open');}
+
+function updateEntryStatus(id,idx,status){
+  const trades=load(),t=trades.find(t=>t.id==id);if(!t)return;
+  t.entries[idx].status=status;save(trades);
+  // Rerender entry block (to show/hide fill price input)
+  document.getElementById('body-'+id).innerHTML=renderBody(t);
+  refreshStats();
+}
+
+function updateActualPrice(id,idx,val){
+  const trades=load(),t=trades.find(t=>t.id==id);if(!t)return;
+  t.entries[idx].actualPrice=parseFloat(val)||null;save(trades);
+  // Update validated summary and position
+  const vsEl=$('val-summary-'+id);if(vsEl)vsEl.innerHTML=buildValSummaryHTML(t);
+  refreshPosSummary(id,t);refreshStats();
+}
+
+function buildValSummaryHTML(t){
+  const v=calcValidated(t);
+  if(v.count===0) return`<div class="val-summary"><span class="vs-label">✓ Validated</span><span class="vs-empty">No entries validated yet</span></div>`;
+  return`<div class="val-summary">
+    <span class="vs-label">✓ Validated</span>
+    <span class="vs-chip">${v.count}/${t.entries.length} entries</span>
+    <span class="vs-chip">Avg Cost: $${v.avgEntry.toFixed(2)}</span>
+    <span class="vs-chip">${v.shares} shares</span>
+    <span class="vs-chip">Cost Basis: ${f$(v.value)}</span>
+  </div>`;
+}
+
+function addSale(id){
+  const trades=load(),t=trades.find(t=>t.id==id);if(!t)return;
+  if(!t.sells)t.sells=[];
+  t.sells.push({id:Date.now(),shares:null,price:null});save(trades);
+  rerenderSells(id,t);
+}
+
+function updateSale(id,saleId,field,val){
+  const trades=load(),t=trades.find(t=>t.id==id);if(!t)return;
+  const sale=t.sells.find(s=>s.id==saleId);if(!sale)return;
+  sale[field]=field==='shares'?parseInt(val)||null:parseFloat(val)||null;
+  save(trades);
+  // Recalc all FIFO P/Ls
+  const fifoResults=calcFifoPLs(t);
+  t.sells.forEach(s=>{
+    const res=fifoResults.find(r=>r.id==s.id);
+    const pl=res?res.pl:null,pc=pl===null?'zero':pl>=0?'pos':'neg';
+    const el=$('spl-'+id+'-'+s.id);
+    if(el){el.textContent=pl===null?'—':f$s(pl);el.className='sell-pl '+pc;}
+  });
+  refreshPosSummary(id,t);refreshStats();
+}
+
+function deleteSale(id,saleId){
+  const trades=load(),t=trades.find(t=>t.id==id);if(!t)return;
+  t.sells=(t.sells||[]).filter(s=>s.id!=saleId);save(trades);
+  rerenderSells(id,t);refreshStats();
+}
+
+function rerenderSells(id,t){
+  const fifoResults=calcFifoPLs(t);
+  let html='';
+  (t.sells||[]).forEach(sale=>{
+    const res=fifoResults.find(r=>r.id===sale.id);
+    const pl=res?res.pl:null,pc=pl===null?'zero':pl>=0?'pos':'neg';
+    html+=`<div class="sell-row">
+      <input class="sell-input" type="number" placeholder="Shares" value="${sale.shares||''}"
+        onchange="updateSale('${id}','${sale.id}','shares',this.value)" min="0" step="1">
+      <input class="sell-input" type="number" placeholder="Price $" value="${sale.price||''}"
+        onchange="updateSale('${id}','${sale.id}','price',this.value)" min="0" step="0.01">
+      <div class="sell-pl ${pc}" id="spl-${id}-${sale.id}">${pl===null?'—':f$s(pl)}</div>
+      <button class="sell-del" onclick="deleteSale('${id}','${sale.id}')">✕</button>
+    </div>`;
+  });
+  const el=$('sell-rows-'+id);
+  if(el)el.innerHTML=html||'<div style="font-size:12px;color:#9B8880;padding:8px 0;font-style:italic;">No sales logged yet.</div>';
+  refreshPosSummary(id,t);
+}
+
+function refreshPosSummary(id,t){
+  const pos=calcPosition(t);
+  const plClass=pos.realizedPL===null?'zero':pos.realizedPL>0?'pos':'neg';
+  const el=$('pos-summary-'+id);
+  if(el)el.innerHTML=`<div class="pos-summary">
+    <div class="pos-grid">
+      <div class="pos-stat"><div class="pos-stat-label">Avg Cost Basis</div><div class="pos-stat-value">${pos.avgCost>0?'$'+pos.avgCost.toFixed(2):'—'}</div></div>
+      <div class="pos-stat"><div class="pos-stat-label">Shares Remaining</div><div class="pos-stat-value">${pos.totalShares>0?pos.sharesRemaining:'—'}</div></div>
+      <div class="pos-stat"><div class="pos-stat-label">Shares Sold</div><div class="pos-stat-value">${pos.sharesSold>0?pos.sharesSold:'—'}</div></div>
+    </div>
+    <div class="pos-pl-row">
+      <span class="pos-pl-label">Realized P/L (FIFO)</span>
+      <span class="pos-pl-value ${plClass}">${pos.realizedPL===null?'No sales yet':f$s(pos.realizedPL)}</span>
+    </div>
+  </div>`;
+  // Update header P/L
+  const hEl=$('pl-'+id);
+  if(hEl){hEl.textContent=pos.realizedPL===null?'Open':f$s(pos.realizedPL);hEl.className='trade-pl '+plClass;}
+}
+
+function updateNotes(id,val){const trades=load(),t=trades.find(t=>t.id==id);if(!t)return;t.notes=val;save(trades);}
+function deleteTrade(id){if(!confirm('Delete this trade?'))return;save(load().filter(t=>t.id!=id));renderJournal();}
+
+function refreshStats(){
+  const trades=load();let totalPL=0,wins=0,closed=0;
+  trades.forEach(t=>{const pos=calcPosition(t);if(pos.realizedPL!==null){totalPL+=pos.realizedPL;closed++;if(pos.realizedPL>0)wins++;}});
+  if(closed>0){
+    $('j-totalpl').textContent=f$s(totalPL);$('j-totalpl').className='jstat-value '+(totalPL>0?'pos':totalPL<0?'neg':'');
+    $('j-winrate').textContent=Math.round((wins/closed)*100)+'%';
+  }
+}
+
+buildEntryRows();
+</script>
+</body>
+</html>
